@@ -10,4 +10,15 @@
     <string name="action_example">Example action</string>
     <string name="action_settings">Settings</string>
 
+    <!-- General -->
+    <skip />
+    <!--slider label -->
+    <string name="in_white">In White</string>
+    <string name="out_white">Out White</string>
+    <string name="in_black">In Black</string>
+    <string name="out_black">Out Black</string>
+    <string name="gamma">Gamma</string>
+    <string name="saturation">Saturation</string>
+    <string name="benchmark">Benchmark</string>
+
 </resources>

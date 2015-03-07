@@ -1,6 +1,9 @@
 package co.dazuku.androidimageprocessing;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -8,6 +11,9 @@ import android.support.v4.app.FragmentManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v8.renderscript.Allocation;
+import android.support.v8.renderscript.Matrix3f;
+import android.support.v8.renderscript.RenderScript;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -16,6 +22,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 
@@ -45,6 +53,8 @@ public class MainActivity extends ActionBarActivity
         mNavigationDrawerFragment.setUp(
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
+
+
     }
 
     @Override
@@ -109,12 +119,130 @@ public class MainActivity extends ActionBarActivity
     /**
      * A placeholder fragment containing a simple view.
      */
-    public static class PlaceholderFragment extends Fragment {
+    public static class PlaceholderFragment extends Fragment implements SeekBar.OnSeekBarChangeListener{
         /**
          * The fragment argument representing the section number for this
          * fragment.
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
+
+        private final String TAG = "Img";
+        private Bitmap mBitmapIn;
+        private Bitmap mBitmapOut;
+        private float mInBlack = 0.0f;
+        private SeekBar mInBlackSeekBar;
+        private float mOutBlack = 0.0f;
+        private SeekBar mOutBlackSeekBar;
+        private float mInWhite = 255.0f;
+        private SeekBar mInWhiteSeekBar;
+        private float mOutWhite = 255.0f;
+        private SeekBar mOutWhiteSeekBar;
+        private float mGamma = 1.0f;
+        private SeekBar mGammaSeekBar;
+        private float mSaturation = 1.0f;
+        private SeekBar mSaturationSeekBar;
+        private TextView mBenchmarkResult;
+        private ImageView mDisplayView;
+
+        Matrix3f satMatrix = new Matrix3f();
+        float mInWMinInB;
+        float mOutWMinOutB;
+        float mOverInWMinInB;
+
+        private RenderScript mRS;
+        private Allocation mInPixelsAllocation;
+        private Allocation mOutPixelsAllocation;
+        private ScriptC_main mScript;
+
+        private void setLevels() {
+            mInWMinInB = mInWhite - mInBlack;
+            mOutWMinOutB = mOutWhite - mOutBlack;
+            mOverInWMinInB = 1.f / mInWMinInB;
+
+            mScript.set_inBlack(mInBlack);
+            mScript.set_outBlack(mOutBlack);
+            mScript.set_inWMinInB(mInWMinInB);
+            mScript.set_outWMinOutB(mOutWMinOutB);
+            mScript.set_overInWMinInB(mOverInWMinInB);
+        }
+
+        private void setSaturation() {
+            float rWeight = 0.299f;
+            float gWeight = 0.587f;
+            float bWeight = 0.114f;
+            float oneMinusS = 1.0f - mSaturation;
+
+            satMatrix.set(0, 0, oneMinusS * rWeight + mSaturation);
+            satMatrix.set(0, 1, oneMinusS * rWeight);
+            satMatrix.set(0, 2, oneMinusS * rWeight);
+            satMatrix.set(1, 0, oneMinusS * gWeight);
+            satMatrix.set(1, 1, oneMinusS * gWeight + mSaturation);
+            satMatrix.set(1, 2, oneMinusS * gWeight);
+            satMatrix.set(2, 0, oneMinusS * bWeight);
+            satMatrix.set(2, 1, oneMinusS * bWeight);
+            satMatrix.set(2, 2, oneMinusS * bWeight + mSaturation);
+            mScript.set_colorMat(satMatrix);
+        }
+
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser) {
+                if (seekBar == mInBlackSeekBar) {
+                    mInBlack = (float)progress;
+                    setLevels();
+                } else if (seekBar == mOutBlackSeekBar) {
+                    mOutBlack = (float)progress;
+                    setLevels();
+                } else if (seekBar == mInWhiteSeekBar) {
+                    mInWhite = (float)progress + 127.0f;
+                    setLevels();
+                } else if (seekBar == mOutWhiteSeekBar) {
+                    mOutWhite = (float)progress + 127.0f;
+                    setLevels();
+                } else if (seekBar == mGammaSeekBar) {
+                    mGamma = (float)progress/100.0f;
+                    mGamma = Math.max(mGamma, 0.1f);
+                    mGamma = 1.0f / mGamma;
+                    mScript.set_gamma(mGamma);
+                } else if (seekBar == mSaturationSeekBar) {
+                    mSaturation = (float)progress / 50.0f;
+                    setSaturation();
+                }
+
+                filter();
+                mDisplayView.invalidate();
+            }
+        }
+
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
+
+        public void onStopTrackingTouch(SeekBar seekBar) {
+        }
+
+        private Bitmap loadBitmap(int resource) {
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            Bitmap b = BitmapFactory.decodeResource(getResources(), resource, options);
+            Bitmap b2 = Bitmap.createBitmap(b.getWidth(), b.getHeight(), b.getConfig());
+            Canvas c = new Canvas(b2);
+            c.drawBitmap(b, 0, 0, null);
+            b.recycle();
+            return b2;
+        }
+
+        private void filter() {
+            mScript.forEach_root(mInPixelsAllocation, mOutPixelsAllocation);
+            mOutPixelsAllocation.copyTo(mBitmapOut);
+        }
+
+        public void benchmark(View v) {
+            filter();
+            long t = java.lang.System.currentTimeMillis();
+            filter();
+            t = java.lang.System.currentTimeMillis() - t;
+            mDisplayView.invalidate();
+            mBenchmarkResult.setText("Result: " + t + " ms");
+        }
 
         /**
          * Returns a new instance of this fragment for the given section
@@ -135,6 +263,57 @@ public class MainActivity extends ActionBarActivity
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+
+            mBitmapIn = loadBitmap(R.drawable.city);
+            mBitmapOut = loadBitmap(R.drawable.city);
+
+            mDisplayView = (ImageView) rootView.findViewById(R.id.display);
+            mDisplayView.setImageBitmap(mBitmapOut);
+
+            mInBlackSeekBar = (SeekBar) rootView.findViewById(R.id.inBlack);
+            mInBlackSeekBar.setOnSeekBarChangeListener(this);
+            mInBlackSeekBar.setMax(128);
+            mInBlackSeekBar.setProgress(0);
+            mOutBlackSeekBar = (SeekBar) rootView.findViewById(R.id.outBlack);
+            mOutBlackSeekBar.setOnSeekBarChangeListener(this);
+            mOutBlackSeekBar.setMax(128);
+            mOutBlackSeekBar.setProgress(0);
+
+            mInWhiteSeekBar = (SeekBar) rootView.findViewById(R.id.inWhite);
+            mInWhiteSeekBar.setOnSeekBarChangeListener(this);
+            mInWhiteSeekBar.setMax(128);
+            mInWhiteSeekBar.setProgress(128);
+            mOutWhiteSeekBar = (SeekBar) rootView.findViewById(R.id.outWhite);
+            mOutWhiteSeekBar.setOnSeekBarChangeListener(this);
+            mOutWhiteSeekBar.setMax(128);
+            mOutWhiteSeekBar.setProgress(128);
+
+            mGammaSeekBar = (SeekBar) rootView.findViewById(R.id.inGamma);
+            mGammaSeekBar.setOnSeekBarChangeListener(this);
+            mGammaSeekBar.setMax(150);
+            mGammaSeekBar.setProgress(100);
+
+            mSaturationSeekBar = (SeekBar) rootView.findViewById(R.id.inSaturation);
+            mSaturationSeekBar.setOnSeekBarChangeListener(this);
+            mSaturationSeekBar.setProgress(50);
+
+            mBenchmarkResult = (TextView) rootView.findViewById(R.id.benchmarkText);
+            mBenchmarkResult.setText("Result: not run");
+
+            mRS = RenderScript.create(getActivity());
+            mInPixelsAllocation = Allocation.createFromBitmap(mRS, mBitmapIn,
+                    Allocation.MipmapControl.MIPMAP_NONE,
+                    Allocation.USAGE_SCRIPT);
+            mOutPixelsAllocation = Allocation.createFromBitmap(mRS, mBitmapOut,
+                    Allocation.MipmapControl.MIPMAP_NONE,
+                    Allocation.USAGE_SCRIPT);
+            mScript = new ScriptC_main(mRS, getResources(), R.raw.main);
+            mScript.set_gamma(mGamma);
+
+            setSaturation();
+            setLevels();
+            filter();
+
             return rootView;
         }
 
@@ -145,5 +324,4 @@ public class MainActivity extends ActionBarActivity
                     getArguments().getInt(ARG_SECTION_NUMBER));
         }
     }
-
 }
