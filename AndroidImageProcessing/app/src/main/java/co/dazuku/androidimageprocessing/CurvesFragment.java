@@ -85,65 +85,60 @@ public class CurvesFragment extends Fragment {
                 Allocation.USAGE_SCRIPT);
         mScript = new ScriptC_curves(mRS, getResources(), R.raw.curves);
 
-        float[] Rx = new float[4];
-        float[] Ry = new float[4];
+        float[] Rx = new float[5];
+        float[] Ry = new float[5];
 
         Rx[0] = 0;
         Ry[0] = 0;
 
-        Rx[1] = 70;
-        Ry[1] = 30;
+        Rx[1] = 65;
+        Ry[1] = 100;
 
-        Rx[2] = 140;
-        Ry[2] = 160;
+        Rx[2] = 130;
+        Ry[2] = 130;
 
-        Rx[3] = 255;
-        Ry[3] = 200;
+        Rx[3] = 195;
+        Ry[3] = 155;
 
-        float[] Gx = new float[4];
-        float[] Gy = new float[4];
+        Rx[4] = 255;
+        Ry[4] = 255;
+
+        float[] Gx = new float[5];
+        float[] Gy = new float[5];
 
         Gx[0] = 0;
         Gy[0] = 0;
 
-        Gx[1] = 100;
-        Gy[1] = 140;
+        Gx[1] = 65;
+        Gy[1] = 25;
 
-        Gx[2] = 180;
-        Gy[2] = 160;
+        Gx[2] = 130;
+        Gy[2] = 130;
 
-        Gx[3] = 255;
-        Gy[3] = 255;
+        Gx[3] = 195;
+        Gy[3] = 235;
 
-        float[] Bx = new float[4];
-        float[] By = new float[4];
+        Gx[4] = 255;
+        Gy[4] = 255;
 
-        Bx[0] = 0;
-        By[0] = 0;
+        float[] Bx = new float[2];
+        float[] By = new float[2];
 
-        Bx[1] = 30;
-        By[1] = 50;
-
-        Bx[0] = 80;
-        By[0] = 120;
+        Bx[0] = 100;
+        By[0] = 100;
 
         Bx[1] = 255;
         By[1] = 255;
 
-        float[] Cx = new float[4];
-        float[] Cy = new float[4];
+        float[] Cx = new float[2];
+        float[] Cy = new float[2];
 
         Cx[0] = 0;
         Cy[0] = 0;
 
-        Cx[1] = 30;
-        Cy[1] = 80;
+        Cx[1] = 200;
+        Cy[1] = 255;
 
-        Cx[2] = 80;
-        Cy[2] = 180;
-
-        Cx[3] = 255;
-        Cy[3] = 255;
 
         Allocation a = Allocation.createSized(mRS, Element.F32(mRS), Rx.length);
         a.copyFrom(Rx);
