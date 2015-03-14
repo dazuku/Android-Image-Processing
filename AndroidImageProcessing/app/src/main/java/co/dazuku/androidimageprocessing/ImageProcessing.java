@@ -4,18 +4,114 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.support.v8.renderscript.Allocation;
 import android.support.v8.renderscript.Element;
+import android.support.v8.renderscript.Float3;
 import android.support.v8.renderscript.RenderScript;
 import android.support.v8.renderscript.ScriptIntrinsicBlur;
+import android.util.Log;
 
+import java.util.Arrays;
 import java.util.List;
 
 import co.dazuku.androidimageprocessing.utils.CurveComposition;
+import co.dazuku.androidimageprocessing.utils.Histogram;
 import co.dazuku.androidimageprocessing.utils.KeyPoint;
 
 /**
  * Created by dazuku on 3/13/15.
  */
 public class ImageProcessing {
+
+    public static Bitmap getHistogramBitmap(Context context, Bitmap image, float[] data, Float3 color, Float3 background) {
+        RenderScript mRS = RenderScript.create(context);
+        Allocation mInPixelsAllocation = Allocation.createFromBitmap(mRS, image,
+                Allocation.MipmapControl.MIPMAP_NONE,
+                Allocation.USAGE_SCRIPT);
+        Allocation mOutPixelsAllocation = Allocation.createFromBitmap(mRS, image,
+                Allocation.MipmapControl.MIPMAP_NONE,
+                Allocation.USAGE_SCRIPT);
+
+        ScriptC_drawHistogram mScript = new ScriptC_drawHistogram(mRS, context.getResources(), R.raw.drawhistogram);
+
+        mScript.set_hc(color);
+        mScript.set_bg(background);
+
+        Allocation alloc = Allocation.createSized(mRS, Element.F32(mRS), data.length);
+        alloc.copyFrom(data);
+
+        mScript.bind_A(alloc);
+
+        mScript.forEach_root(mInPixelsAllocation, mOutPixelsAllocation);
+        mOutPixelsAllocation.copyTo(image);
+
+        return image;
+    }
+
+    public static Bitmap[] getHistogramsBitmap(Context context, Bitmap bitmap) {
+        Bitmap histograms[] = new Bitmap[3];
+
+        Histogram histogram = getHistogram(context, bitmap);
+        histogram.normalize(255);
+
+        Float3 bgColor = new Float3(255, 255, 255);
+        Float3 hcColor;
+        float[] data = new float[256];
+        for(int i = 0; i < 3; i++) {
+            histograms[i] = Bitmap.createScaledBitmap(bitmap, 256, 256, false);
+            switch(i) {
+                case 0:
+                    data = histogram.getRedNormalized();
+                    hcColor = new Float3(255, 0, 0);
+                    break;
+                case 1:
+                    data = histogram.getGreenNormalized();
+                    hcColor = new Float3(0, 255, 0);
+                    break;
+                case 2:
+                    data = histogram.getBlueNormalized();
+                    hcColor = new Float3(0, 0, 255);
+                    break;
+                default:
+                    Arrays.fill(data, 155.f);
+                    hcColor = new Float3(0, 0, 0);
+                    break;
+            }
+            getHistogramBitmap(context, histograms[i], data, hcColor, bgColor);
+        }
+
+        return histograms;
+    };
+
+    public static Histogram getHistogram(Context context, Bitmap bitmap) {
+        RenderScript mRS = RenderScript.create(context);
+        Allocation mInPixelsAllocation = Allocation.createFromBitmap(mRS, bitmap,
+                Allocation.MipmapControl.MIPMAP_NONE,
+                Allocation.USAGE_SCRIPT);
+        ScriptC_histogram mScript = new ScriptC_histogram(mRS, context.getResources(), R.raw.histogram);
+
+        Allocation allocR, allocG, allocB;
+
+        Histogram histogram = new Histogram();
+
+        allocR = Allocation.createSized(mRS, Element.I32(mRS), histogram.getRed().length);
+        allocG = Allocation.createSized(mRS, Element.I32(mRS), histogram.getGreen().length);
+        allocB = Allocation.createSized(mRS, Element.I32(mRS), histogram.getBlue().length);
+
+        allocR.copyFrom(histogram.getRed());
+        allocG.copyFrom(histogram.getGreen());
+        allocB.copyFrom(histogram.getBlue());
+
+        mScript.bind_R(allocR);
+        mScript.bind_G(allocG);
+        mScript.bind_B(allocB);
+
+        mScript.forEach_root(mInPixelsAllocation, mInPixelsAllocation);
+
+        allocR.copyTo(histogram.getRed());
+        allocG.copyTo(histogram.getGreen());
+        allocB.copyTo(histogram.getBlue());
+
+        return histogram;
+    }
 
     public static Bitmap applyGaussianBlur(Context context, Bitmap bitmap, Bitmap out, float radius) {
         RenderScript rs = RenderScript.create(context);

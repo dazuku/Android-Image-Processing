@@ -27,6 +27,14 @@ public class CurvesFragment extends Fragment {
     private Bitmap mBitmapIn;
     private Bitmap mBitmapOut;
 
+    ImageView redOriginalView;
+    ImageView greenOriginalView;
+    ImageView blueOriginalView;
+
+    ImageView redModifyView;
+    ImageView greenModifyView;
+    ImageView blueModifyView;
+
     /**
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
@@ -92,11 +100,25 @@ public class CurvesFragment extends Fragment {
         imageView = (ImageView) view.findViewById(R.id.curvesImage);
         originalImageView = (ImageView) view.findViewById(R.id.originalImage);
 
+        redOriginalView = (ImageView) view.findViewById(R.id.imageView);
+        greenOriginalView = (ImageView) view.findViewById(R.id.imageView2);
+        blueOriginalView = (ImageView) view.findViewById(R.id.imageView3);
+
+        redModifyView = (ImageView) view.findViewById(R.id.imageView4);
+        greenModifyView = (ImageView) view.findViewById(R.id.imageView5);
+        blueModifyView = (ImageView) view.findViewById(R.id.imageView6);
+
         mBitmapIn = loadBitmap(R.drawable.city);
         mBitmapOut = loadBitmap(R.drawable.city);
 
         imageView.setImageBitmap(mBitmapOut);
         originalImageView.setImageBitmap(mBitmapIn);
+
+        Bitmap[] histogram = ImageProcessing.getHistogramsBitmap(getActivity(), mBitmapIn);
+
+        redOriginalView.setImageBitmap(histogram[0]);
+        greenOriginalView.setImageBitmap(histogram[1]);
+        blueOriginalView.setImageBitmap(histogram[2]);
 
 
         new ApplyCurveAsync().execute();
@@ -106,11 +128,18 @@ public class CurvesFragment extends Fragment {
 
     private class ApplyCurveAsync extends AsyncTask<Void, Void, Void> {
         ProgressDialog dialog;
+        Bitmap[] histogram;
 
         @Override
         protected Void doInBackground(Void... params) {
             applyCurve();
-            ImageProcessing.applyGaussianBlur(getActivity(), mBitmapOut, mBitmapOut, 25.f);
+
+            histogram = ImageProcessing.getHistogramsBitmap(getActivity(), mBitmapOut);
+
+
+            //ImageProcessing.getHistogram(getActivity(), mBitmapOut);
+            //ImageProcessing.applyGaussianBlur(getActivity(), mBitmapOut, mBitmapOut, 25.f);
+            //ImageProcessing.getHistogram(getActivity(), mBitmapOut);
             return null;
         }
 
@@ -129,6 +158,10 @@ public class CurvesFragment extends Fragment {
             super.onPostExecute(aVoid);
             dialog.dismiss();
             imageView.setImageBitmap(mBitmapOut);
+
+            redModifyView.setImageBitmap(histogram[0]);
+            greenModifyView.setImageBitmap(histogram[1]);
+            blueModifyView.setImageBitmap(histogram[2]);
         }
     }
 
