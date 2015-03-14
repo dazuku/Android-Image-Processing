@@ -11,14 +11,28 @@ float overInWMinInB;
 float gamma;
 rs_matrix3x3 colorMat;
 
+float color;
+
+float3 *a;
+float3 *b;
+
 void root(const uchar4 *in, uchar4 *out, uint32_t x, uint32_t y) {
     float3 pixel = convert_float4(in[0]).rgb;
-    pixel = rsMatrixMultiply(&colorMat, pixel);
-    pixel = clamp(pixel, 0.f, 255.f);
-    pixel = (pixel - inBlack) * overInWMinInB;
-    if (gamma != 1.0f)
-        pixel = pow(pixel, (float3)gamma);
-    pixel = pixel * outWMinOutB + outBlack;
+    if(pixel[0] + pixel[1] + pixel[2] > 510.0f) {
+        pixel[0] = pixel[2] + pixel[1]/2;
+        pixel[1] = pixel[2] + pixel[0]/2;
+        pixel[2] = pixel[2];
+    } else if(pixel[0] + pixel[1] + pixel[2] > 255.0f){
+        pixel[0] = pixel[0];
+        pixel[1] = pixel[0] + pixel[1] / 2;
+        pixel[2] = pixel[0] + pixel[2] / 2;
+    } else {
+        pixel[0] = pixel[1] + pixel[0] / 2;
+        pixel[1] = pixel[1];
+        pixel[2] = pixel[1] + pixel[2] / 2;
+    }
+
+
     pixel = clamp(pixel, 0.f, 255.f);
     out->xyz = convert_uchar3(pixel);
 }

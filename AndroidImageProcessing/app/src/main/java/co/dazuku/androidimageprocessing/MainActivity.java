@@ -12,6 +12,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v8.renderscript.Allocation;
+import android.support.v8.renderscript.Element;
 import android.support.v8.renderscript.Matrix3f;
 import android.support.v8.renderscript.RenderScript;
 import android.view.Gravity;
@@ -62,7 +63,7 @@ public class MainActivity extends ActionBarActivity
         // update the main content by replacing fragments
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
-                .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
+                .replace(R.id.container, CurvesFragment.newInstance())
                 .commit();
     }
 
@@ -309,6 +310,25 @@ public class MainActivity extends ActionBarActivity
                     Allocation.USAGE_SCRIPT);
             mScript = new ScriptC_main(mRS, getResources(), R.raw.main);
             mScript.set_gamma(mGamma);
+
+            mScript.set_color(255.0f);
+
+            int[] B = new int[2];
+            int[] A = new int[2];
+
+            A[0] = 0;
+            A[1] = 255;
+
+            B[0] = 0;
+            B[1] = 255;
+
+            Allocation a = Allocation.createSized(mRS, Element.F32(mRS), A.length);
+            a.copyFrom(A);
+            Allocation b = Allocation.createSized(mRS, Element.F32(mRS), B.length);
+            b.copyFrom(B);
+
+            mScript.bind_a(a);
+            mScript.bind_b(b);
 
             setSaturation();
             setLevels();
