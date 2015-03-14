@@ -8,28 +8,28 @@ float *Rx;
 // Vector in y to Red compose
 float *Ry;
 // Size of array in Red
-float redSize;
+float redSize = 0;
 
 // Vector in x to Green compose
 float *Gx;
 // Vector in y to Green compose
 float *Gy;
 // Size of array in Green
-float greenSize;
+float greenSize = 0;
 
 // Vector in x to Blue compose
 float *Bx;
 // Vector in y to Blue compose
 float *By;
 // Size of array in Blue
-float blueSize;
+float blueSize = 0;
 
 // Vector in x to Compose
 float *Cx;
 // Vector in y to Compose
 float *Cy;
 // Size of array in Compose
-float composeSize;
+float composeSize = 0;
 
 
 void root(const uchar4 *in, uchar4 *out, uint32_t x, uint32_t y) {

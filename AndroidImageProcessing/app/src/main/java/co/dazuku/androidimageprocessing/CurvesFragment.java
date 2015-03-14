@@ -1,17 +1,19 @@
 package co.dazuku.androidimageprocessing;
 
+import android.app.ProgressDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v8.renderscript.Allocation;
-import android.support.v8.renderscript.Element;
-import android.support.v8.renderscript.RenderScript;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import co.dazuku.androidimageprocessing.utils.CurveComposition;
+import co.dazuku.androidimageprocessing.utils.KeyPoint;
 
 
 /**
@@ -24,11 +26,6 @@ public class CurvesFragment extends Fragment {
 
     private Bitmap mBitmapIn;
     private Bitmap mBitmapOut;
-
-    private RenderScript mRS;
-    private ScriptC_curves mScript;
-    private Allocation mInPixelsAllocation;
-    private Allocation mOutPixelsAllocation;
 
     /**
      * Use this factory method to create a new instance of
@@ -62,6 +59,30 @@ public class CurvesFragment extends Fragment {
         return b2;
     }
 
+    public void applyCurve() {
+        CurveComposition composition = new CurveComposition();
+
+        composition.addRedKeyPoint(new KeyPoint(0, 0));
+        composition.addRedKeyPoint(new KeyPoint(65, 100));
+        composition.addRedKeyPoint(new KeyPoint(130, 130));
+        composition.addRedKeyPoint(new KeyPoint(195, 155));
+        composition.addRedKeyPoint(new KeyPoint(255, 255));
+
+        composition.addGreenKeyPoint(new KeyPoint(0, 0));
+        composition.addGreenKeyPoint(new KeyPoint(65, 25));
+        composition.addGreenKeyPoint(new KeyPoint(130, 130));
+        composition.addGreenKeyPoint(new KeyPoint(195, 235));
+        composition.addGreenKeyPoint(new KeyPoint(255, 255));
+
+        composition.addBlueKeyPoint(new KeyPoint(100, 100));
+        composition.addBlueKeyPoint(new KeyPoint(255, 255));
+
+        composition.addCompositionKeyPoint(new KeyPoint(0, 0));
+        composition.addCompositionKeyPoint(new KeyPoint(200, 255));
+
+        ImageProcessing.applyCurvesToBitmap(getActivity(), mBitmapIn, mBitmapOut, composition);
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -76,112 +97,37 @@ public class CurvesFragment extends Fragment {
         imageView.setImageBitmap(mBitmapOut);
         originalImageView.setImageBitmap(mBitmapIn);
 
-        mRS = RenderScript.create(getActivity());
-        mInPixelsAllocation = Allocation.createFromBitmap(mRS, mBitmapIn,
-                Allocation.MipmapControl.MIPMAP_NONE,
-                Allocation.USAGE_SCRIPT);
-        mOutPixelsAllocation = Allocation.createFromBitmap(mRS, mBitmapOut,
-                Allocation.MipmapControl.MIPMAP_NONE,
-                Allocation.USAGE_SCRIPT);
-        mScript = new ScriptC_curves(mRS, getResources(), R.raw.curves);
-
-        float[] Rx = new float[5];
-        float[] Ry = new float[5];
-
-        Rx[0] = 0;
-        Ry[0] = 0;
-
-        Rx[1] = 65;
-        Ry[1] = 100;
-
-        Rx[2] = 130;
-        Ry[2] = 130;
-
-        Rx[3] = 195;
-        Ry[3] = 155;
-
-        Rx[4] = 255;
-        Ry[4] = 255;
-
-        float[] Gx = new float[5];
-        float[] Gy = new float[5];
-
-        Gx[0] = 0;
-        Gy[0] = 0;
-
-        Gx[1] = 65;
-        Gy[1] = 25;
-
-        Gx[2] = 130;
-        Gy[2] = 130;
-
-        Gx[3] = 195;
-        Gy[3] = 235;
-
-        Gx[4] = 255;
-        Gy[4] = 255;
-
-        float[] Bx = new float[2];
-        float[] By = new float[2];
-
-        Bx[0] = 100;
-        By[0] = 100;
-
-        Bx[1] = 255;
-        By[1] = 255;
-
-        float[] Cx = new float[2];
-        float[] Cy = new float[2];
-
-        Cx[0] = 0;
-        Cy[0] = 0;
-
-        Cx[1] = 200;
-        Cy[1] = 255;
-
-
-        Allocation a = Allocation.createSized(mRS, Element.F32(mRS), Rx.length);
-        a.copyFrom(Rx);
-        Allocation b = Allocation.createSized(mRS, Element.F32(mRS), Ry.length);
-        b.copyFrom(Ry);
-
-        Allocation aGx = Allocation.createSized(mRS, Element.F32(mRS), Gx.length);
-        aGx.copyFrom(Gx);
-        Allocation aGy = Allocation.createSized(mRS, Element.F32(mRS), Gy.length);
-        aGy.copyFrom(Gy);
-
-        Allocation aBx = Allocation.createSized(mRS, Element.F32(mRS), Bx.length);
-        aBx.copyFrom(Bx);
-        Allocation aBy = Allocation.createSized(mRS, Element.F32(mRS), By.length);
-        aBy.copyFrom(By);
-
-        Allocation aCx = Allocation.createSized(mRS, Element.F32(mRS), Cx.length);
-        aCx.copyFrom(Cx);
-        Allocation aCy = Allocation.createSized(mRS, Element.F32(mRS), Cy.length);
-        aCy.copyFrom(Cy);
-
-        mScript.bind_Rx(a);
-        mScript.bind_Ry(b);
-
-        mScript.bind_Gx(aGx);
-        mScript.bind_Gy(aGy);
-
-        mScript.bind_Bx(aBx);
-        mScript.bind_By(aBy);
-
-        mScript.bind_Cx(aCx);
-        mScript.bind_Cy(aCy);
-
-        mScript.set_redSize(Rx.length);
-        mScript.set_greenSize(Gx.length);
-        mScript.set_blueSize(Bx.length);
-        mScript.set_composeSize(Cx.length);
-
-        mScript.forEach_root(mInPixelsAllocation, mOutPixelsAllocation);
-        mOutPixelsAllocation.copyTo(mBitmapOut);
+        new ApplyCurveAsync().execute();
 
         // Inflate the layout for this fragment
         return view;
+    }
+
+    private class ApplyCurveAsync extends AsyncTask<Void, Void, Void> {
+        ProgressDialog dialog;
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            applyCurve();
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            dialog = new ProgressDialog(getActivity());
+            dialog.setMessage("Processing...");
+            dialog.setCancelable(false);
+            dialog.show();
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            dialog.dismiss();
+            imageView.setImageBitmap(mBitmapOut);
+        }
     }
 
 }
