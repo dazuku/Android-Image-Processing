@@ -86,6 +86,7 @@ public class CurvesFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_curves, container, false);
 
         imageView = (ImageView) view.findViewById(R.id.curvesImage);
@@ -97,9 +98,9 @@ public class CurvesFragment extends Fragment {
         imageView.setImageBitmap(mBitmapOut);
         originalImageView.setImageBitmap(mBitmapIn);
 
+
         new ApplyCurveAsync().execute();
 
-        // Inflate the layout for this fragment
         return view;
     }
 
@@ -109,6 +110,7 @@ public class CurvesFragment extends Fragment {
         @Override
         protected Void doInBackground(Void... params) {
             applyCurve();
+            ImageProcessing.applyGaussianBlur(getActivity(), mBitmapOut, mBitmapOut, 25.f);
             return null;
         }
 

@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.support.v8.renderscript.Allocation;
 import android.support.v8.renderscript.Element;
 import android.support.v8.renderscript.RenderScript;
+import android.support.v8.renderscript.ScriptIntrinsicBlur;
 
 import java.util.List;
 
@@ -15,6 +16,19 @@ import co.dazuku.androidimageprocessing.utils.KeyPoint;
  * Created by dazuku on 3/13/15.
  */
 public class ImageProcessing {
+
+    public static Bitmap applyGaussianBlur(Context context, Bitmap bitmap, Bitmap out, float radius) {
+        RenderScript rs = RenderScript.create(context);
+        ScriptIntrinsicBlur theIntrinsic = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));;
+        Allocation tmpIn = Allocation.createFromBitmap(rs, bitmap);
+        Allocation tmpOut = Allocation.createFromBitmap(rs, out);
+        theIntrinsic.setRadius(radius);
+        theIntrinsic.setInput(tmpIn);
+        theIntrinsic.forEach(tmpOut);
+        tmpOut.copyTo(out);
+
+        return out;
+    }
 
     public static Bitmap applyCurvesToBitmap(Context context, Bitmap bitmap, Bitmap out, CurveComposition composition) {
 

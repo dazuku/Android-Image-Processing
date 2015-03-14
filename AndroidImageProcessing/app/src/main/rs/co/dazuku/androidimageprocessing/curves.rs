@@ -101,6 +101,7 @@ void root(const uchar4 *in, uchar4 *out, uint32_t x, uint32_t y) {
             }
         }
     }
+    pixel = clamp(pixel, 0.f, 255.f);
 
     // process to Compose
     if(composeSize > 0) {
